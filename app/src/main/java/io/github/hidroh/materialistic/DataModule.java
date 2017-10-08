@@ -16,6 +16,8 @@
 
 package io.github.hidroh.materialistic;
 
+import android.content.Context;
+
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -30,11 +32,13 @@ import io.github.hidroh.materialistic.data.FeedbackClient;
 import io.github.hidroh.materialistic.data.HackerNewsClient;
 import io.github.hidroh.materialistic.data.ItemManager;
 import io.github.hidroh.materialistic.data.ReadabilityClient;
+import io.github.hidroh.materialistic.data.RestServiceFactory;
 import io.github.hidroh.materialistic.data.SessionManager;
 import io.github.hidroh.materialistic.data.SyncScheduler;
 import io.github.hidroh.materialistic.data.UserManager;
 import okhttp3.Call;
 import rx.Scheduler;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 import static io.github.hidroh.materialistic.ActivityModule.ALGOLIA;
@@ -42,20 +46,23 @@ import static io.github.hidroh.materialistic.ActivityModule.HN;
 import static io.github.hidroh.materialistic.ActivityModule.POPULAR;
 
 @Module(library = true, complete = false, includes = NetworkModule.class)
-class DataModule {
+public class DataModule {
+    public static final String MAIN_THREAD = "main";
+    public static final String IO_THREAD = "io";
+
     @Provides @Singleton @Named(HN)
     public ItemManager provideHackerNewsClient(HackerNewsClient client) {
         return client;
     }
 
     @Provides @Singleton @Named(ALGOLIA)
-    public ItemManager provideAlgoliaClient(AlgoliaClient client) {
-        return client;
+    public ItemManager provideAlgoliaClient(Context context, RestServiceFactory factory) {
+        return new AlgoliaClient(factory, Preferences.isSortByRecent(context));
     }
 
     @Provides @Singleton @Named(POPULAR)
-    public ItemManager provideAlgoliaPopularClient(AlgoliaPopularClient client) {
-        return client;
+    public ItemManager provideAlgoliaPopularClient(Context context, RestServiceFactory factory) {
+        return new AlgoliaPopularClient(factory, Preferences.isSortByRecent(context));
     }
 
     @Provides @Singleton
@@ -74,23 +81,29 @@ class DataModule {
     }
 
     @Provides @Singleton
-    public FavoriteManager provideFavoriteManager(Scheduler ioScheduler) {
+    public FavoriteManager provideFavoriteManager(@Named(IO_THREAD) Scheduler ioScheduler) {
         return new FavoriteManager(ioScheduler);
     }
 
     @Provides @Singleton
-    public SessionManager provideSessionManager(Scheduler ioScheduler) {
+    public SessionManager provideSessionManager(@Named(IO_THREAD) Scheduler ioScheduler) {
         return new SessionManager(ioScheduler);
     }
 
     @Provides @Singleton
-    public UserServices provideUserServices(Call.Factory callFactory, Scheduler ioScheduler) {
+    public UserServices provideUserServices(Call.Factory callFactory,
+                                            @Named(IO_THREAD) Scheduler ioScheduler) {
         return new UserServicesClient(callFactory, ioScheduler);
     }
 
-    @Provides @Singleton
+    @Provides @Singleton @Named(IO_THREAD)
     public Scheduler provideIoScheduler() {
         return Schedulers.io();
+    }
+
+    @Provides @Singleton @Named(MAIN_THREAD)
+    public Scheduler provideMainThreadScheduler() {
+        return AndroidSchedulers.mainThread();
     }
 
     @Provides @Singleton

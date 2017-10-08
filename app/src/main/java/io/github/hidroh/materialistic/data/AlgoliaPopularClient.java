@@ -16,22 +16,18 @@
 
 package io.github.hidroh.materialistic.data;
 
-import android.content.Context;
 import android.support.annotation.StringDef;
 import android.text.format.DateUtils;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-import javax.inject.Inject;
-
 import rx.Observable;
 
 public class AlgoliaPopularClient extends AlgoliaClient {
 
-    @Inject
-    public AlgoliaPopularClient(Context context, RestServiceFactory factory) {
-        super(context, factory);
+    public AlgoliaPopularClient(RestServiceFactory factory, boolean sortByRecent) {
+        super(factory, sortByRecent);
     }
 
     @Retention(RetentionPolicy.SOURCE)
